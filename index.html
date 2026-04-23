@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q哥 行動電源召回換貨申請</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #1B2E4B;
+    --navy-mid: #2A4170;
+    --navy-light: #EEF2F8;
+    --dark: #1a1a1a;
+    --muted: #888;
+    --border: #dde3ed;
+    --bg: #f4f6fa;
+    --white: #ffffff;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    min-height: 100vh;
+    padding: 40px 16px 80px;
+  }
+
+  .wrapper { max-width: 640px; margin: 0 auto; }
+
+  .header {
+    background: var(--navy);
+    color: white;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 32px 36px 28px;
+  }
+
+  .header-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.65;
+    margin-bottom: 10px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 14px;
+  }
+
+  .header-notice {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.8;
+    opacity: 0.92;
+  }
+
+  .models {
+    background: var(--navy-light);
+    border-left: 3px solid var(--navy);
+    padding: 14px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .models-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--navy);
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+
+  .model-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    background: white;
+    border: 1px solid #c5d0e0;
+    color: var(--navy);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .form-body {
+    background: var(--white);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 36px;
+    border: 1px solid var(--border);
+    border-top: none;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--navy);
+    margin: 28px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--navy-light);
+  }
+
+  .section-title:first-child { margin-top: 0; }
+
+  .field { margin-bottom: 20px; }
+
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    color: var(--dark);
+  }
+
+  label .req { color: #c0392b; margin-left: 2px; }
+
+  label .hint {
+    font-weight: 400;
+    color: var(--muted);
+    font-size: 12px;
+    margin-left: 6px;
+  }
+
+  input[type="text"],
+  input[type="tel"],
+  input[type="email"],
+  input[type="date"],
+  input[type="number"],
+  select,
+  textarea {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 11px 14px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 14px;
+    color: var(--dark);
+    background: white;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    appearance: none;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(27,46,75,0.08);
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .check-group { display: flex; flex-direction: column; gap: 10px; }
+
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+  }
+
+  .check-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--navy);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .check-item span { font-size: 14px; color: var(--dark); }
+
+  .check-item .mono {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .model-row {
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .model-row:has(input:checked) {
+    border-color: var(--navy);
+    background: var(--navy-light);
+  }
+
+  .qty-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .qty-input {
+    width: 90px !important;
+    padding: 7px 10px !important;
+    font-size: 14px;
+  }
+
+  .qty-unit { font-size: 13px; color: var(--muted); }
+
+  .radio-group { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .radio-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    padding: 10px 16px;
+    flex: 1;
+    min-width: 130px;
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .radio-item:has(input:checked) {
+    border-color: var(--navy);
+    background: var(--navy-light);
+  }
+
+  .radio-item input[type="radio"] {
+    accent-color: var(--navy);
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .radio-item span { font-size: 14px; font-weight: 500; }
+
+  .submit-wrap { margin-top: 32px; text-align: center; }
+
+  .submit-btn {
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 15px 48px;
+    font-family: 'Noto Sans TC', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 1px;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .submit-btn:hover { background: var(--navy-mid); }
+  .submit-btn:active { transform: scale(0.99); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .submit-note {
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-banner {
+    display: none;
+    background: #fff0f0;
+    border: 1px solid #f5c0c0;
+    border-radius: 7px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #c0392b;
+    margin-top: 12px;
+    text-align: center;
+  }
+
+  .success {
+    display: none;
+    text-align: center;
+    padding: 60px 36px;
+  }
+
+  .success-icon {
+    width: 64px;
+    height: 64px;
+    background: #eaf2ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 28px;
+  }
+
+  .success h2 { font-size: 20px; margin-bottom: 10px; color: var(--navy); }
+  .success p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+  @media (max-width: 480px) {
+    .form-body { padding: 24px 20px; }
+    .header { padding: 24px 20px; }
+    .row-2 { grid-template-columns: 1fr; }
+    .radio-group { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <div class="header-tag">⚠ 重要安全公告</div>
+    <h1>行動電源召回換貨申請</h1>
+    <div class="header-notice">
+      因部分批次商品內部零組件存在異常，可能導致電池過熱或膨脹爆炸風險。<br>
+      請立即停止使用，填寫下方表單申請換貨。
+    </div>
+  </div>
+
+  <div class="models">
+    <span class="models-label">召回型號</span>
+    <span class="model-tag">POT-482S</span>
+    <span class="model-tag">POT-487S</span>
+    <span class="model-tag">POT-528</span>
+    <span class="model-tag">POT-533</span>
+  </div>
+
+  <div class="form-body">
+    <div id="formContent">
+
+      <div class="section-title">基本資料</div>
+
+      <div class="row-2">
+        <div class="field">
+          <label>姓名 <span class="req">*</span></label>
+          <input type="text" id="name" placeholder="請輸入姓名">
+        </div>
+        <div class="field">
+          <label>聯絡電話 <span class="req">*</span></label>
+          <input type="tel" id="phone" placeholder="09XX-XXX-XXX">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Email <span class="req">*</span></label>
+        <input type="email" id="email" placeholder="your@email.com">
+      </div>
+
+      <div class="section-title">商品資訊</div>
+
+      <div class="field">
+        <label>召回商品型號與數量 <span class="req">*</span> <span class="hint">請勾選並填寫各款數量</span></label>
+        <div class="check-group">
+          <div class="model-row">
+            <label class="check-item">
+              <input type="checkbox" value="POT-482S" class="model-check">
+              <span>5000mAh 超薄磁吸固態防爆 <span class="mono">POT-482S</span></span>
+            </label>
+            <div class="qty-inline" id="qty-POT-482S" style="display:none">
+              <input type="number" min="1" placeholder="數量" class="qty-input" data-model="POT-482S">
+              <span class="qty-unit">件</span>
+            </div>
+          </div>
+          <div class="model-row">
+            <label class="check-item">
+              <input type="checkbox" value="POT-487S" class="model-check">
+              <span>10000mAh 超薄磁吸固態防爆 <span class="mono">POT-487S</span></span>
+            </label>
+            <div class="qty-inline" id="qty-POT-487S" style="display:none">
+              <input type="number" min="1" placeholder="數量" class="qty-input" data-model="POT-487S">
+              <span class="qty-unit">件</span>
+            </div>
+          </div>
+          <div class="model-row">
+            <label class="check-item">
+              <input type="checkbox" value="POT-528" class="model-check">
+              <span>5000mAh 固態防爆磁吸 <span class="mono">POT-528</span></span>
+            </label>
+            <div class="qty-inline" id="qty-POT-528" style="display:none">
+              <input type="number" min="1" placeholder="數量" class="qty-input" data-model="POT-528">
+              <span class="qty-unit">件</span>
+            </div>
+          </div>
+          <div class="model-row">
+            <label class="check-item">
+              <input type="checkbox" value="POT-533" class="model-check">
+              <span>10000mAh 固態防爆磁吸 <span class="mono">POT-533</span></span>
+            </label>
+            <div class="qty-inline" id="qty-POT-533" style="display:none">
+              <input type="number" min="1" placeholder="數量" class="qty-input" data-model="POT-533">
+              <span class="qty-unit">件</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>購買日期 <span class="hint">（約略即可）</span></label>
+        <input type="date" id="buyDate">
+      </div>
+
+      <div class="field">
+        <label>購買通路 <span class="req">*</span></label>
+        <select id="channel">
+          <option value="" disabled selected>請選擇</option>
+          <option>Q哥官網</option>
+          <option>Q哥門市</option>
+          <option>蝦皮購物</option>
+          <option>其他通路</option>
+        </select>
+      </div>
+
+      <div class="section-title">寄回資訊</div>
+
+      <div class="field">
+        <label>送件方式 <span class="req">*</span></label>
+        <div class="radio-group">
+          <label class="radio-item">
+            <input type="radio" name="sendMethod" value="寄回">
+            <span>📦 寄回換貨</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="sendMethod" value="門市">
+            <span>🏪 親至門市</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="field" id="addressBlock">
+        <label>收件地址 <span class="req">*</span> <span class="hint">換貨後寄回給您的地址</span></label>
+        <input type="text" id="address" placeholder="縣市、區、路段、門號、樓層">
+      </div>
+
+      <div class="field">
+        <label>備註</label>
+        <textarea id="note" placeholder="商品狀況說明、其他需求等（選填）"></textarea>
+      </div>
+
+      <div class="submit-wrap">
+        <button class="submit-btn" id="submitBtn" onclick="submitForm()">送出申請</button>
+        <div class="error-banner" id="errorBanner">送出失敗，請稍後再試或直接聯繫客服。</div>
+        <p class="submit-note">送出後客服將於 1～2 個工作天內與您聯繫確認換貨細節<br>如有緊急問題請直接聯繫 Q哥 LINE 客服</p>
+      </div>
+
+    </div>
+
+    <div class="success" id="successMsg">
+      <div class="success-icon">✅</div>
+      <h2>申請已送出！</h2>
+      <p>感謝您的配合。<br>我們的客服將於 1～2 個工作天內與您聯繫，<br>安排後續換貨事宜。<br><br>造成您的不便，Q哥深感抱歉，謝謝您的理解與支持。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ========================================
+  // ⬇️ 設定完 Apps Script 後把網址貼在這裡
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxljkzkPGRHtH17elG92tkdU_jzPOoxvqwLYxhjk62CuB3LSN1VwrPI-fDmQuxiPG0LZA/exec';
+  // ========================================
+
+  document.querySelectorAll('.model-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const qtyBlock = document.getElementById('qty-' + cb.value);
+      if (qtyBlock) {
+        qtyBlock.style.display = cb.checked ? 'flex' : 'none';
+        if (!cb.checked) qtyBlock.querySelector('input').value = '';
+      }
+    });
+  });
+
+  document.querySelectorAll('input[name="sendMethod"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      document.getElementById('addressBlock').style.display =
+        radio.value === '門市' ? 'none' : 'block';
+    });
+  });
+
+  async function submitForm() {
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const channel = document.getElementById('channel').value;
+    const sendMethod = document.querySelector('input[name="sendMethod"]:checked');
+    const models = [...document.querySelectorAll('.model-check:checked')].map(c => c.value);
+
+    if (!name || !phone || !email) { alert('請填寫姓名、電話與 Email'); return; }
+    if (models.length === 0) { alert('請選擇至少一項召回商品型號'); return; }
+
+    let qtyValid = true;
+    const modelQtyList = [];
+    models.forEach(m => {
+      const qtyVal = document.querySelector(`.qty-input[data-model="${m}"]`).value;
+      if (!qtyVal || parseInt(qtyVal) < 1) { qtyValid = false; return; }
+      modelQtyList.push(`${m} x${qtyVal}`);
+    });
+    if (!qtyValid) { alert('請填寫每個勾選型號的數量'); return; }
+    if (!channel) { alert('請選擇購買通路'); return; }
+    if (!sendMethod) { alert('請選擇送件方式'); return; }
+
+    const address = document.getElementById('address').value.trim();
+    if (sendMethod.value === '寄回' && !address) { alert('請填寫收件地址'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>送出中...';
+    document.getElementById('errorBanner').style.display = 'none';
+
+    const payload = {
+      申請時間: new Date().toLocaleString('zh-TW'),
+      姓名: name,
+      電話: phone,
+      Email: email,
+      型號與數量: modelQtyList.join('、'),
+      購買日期: document.getElementById('buyDate').value || '未填寫',
+      購買通路: channel,
+      送件方式: sendMethod.value,
+      收件地址: sendMethod.value === '門市' ? '親至門市' : address,
+      備註: document.getElementById('note').value.trim() || '無'
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      document.getElementById('formContent').style.display = 'none';
+      document.getElementById('successMsg').style.display = 'block';
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = '送出申請';
+      document.getElementById('errorBanner').style.display = 'block';
+    }
+  }
+</script>
+</body>
+</html>
