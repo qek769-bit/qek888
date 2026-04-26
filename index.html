@@ -381,6 +381,29 @@
         <input type="email" id="email" placeholder="your@email.com">
       </div>
 
+      <div class="section-title">商品照片</div>
+
+      <div class="field">
+        <label>上傳行動電源背面標籤照片 <span class="hint">方便客服核對型號與製造日期</span></label>
+        <div id="uploadZone" style="
+          border: 2px dashed var(--border);
+          border-radius: var(--radius);
+          padding: 28px 20px;
+          text-align: center;
+          cursor: pointer;
+          background: var(--navy-light);
+          transition: border-color 0.2s;
+        " onclick="document.getElementById('photoInput').click()">
+          <input type="file" id="photoInput" accept="image/*" capture="environment" multiple style="display:none" onchange="handleUpload(event)">
+          <div id="uploadPrompt">
+            <div style="font-size:32px; margin-bottom:10px;">📷</div>
+            <div style="font-weight:500; color:var(--navy); margin-bottom:4px;">點此拍照或上傳圖片</div>
+            <div style="font-size:12px; color:var(--muted);">請確保型號與製造日期清晰可見，可上傳多張</div>
+          </div>
+        </div>
+        <div id="previewGrid" style="display:none; margin-top:12px; display:flex; flex-wrap:wrap; gap:10px;"></div>
+      </div>
+
       <div class="section-title">商品資訊</div>
 
       <div class="field">
@@ -565,5 +588,56 @@
     }
   }
 </script>
+  <script>
+  // ── 照片上傳預覽 ──
+  let uploadedPhotos = [];
+
+  function handleUpload(event) {
+    const files = Array.from(event.target.files);
+    if (!files.length) return;
+
+    const grid = document.getElementById('previewGrid');
+    grid.style.display = 'flex';
+
+    files.forEach(file => {
+      uploadedPhotos.push(file);
+      const reader = new FileReader();
+      reader.onload = e => {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative; width:100px; height:100px;';
+
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.cssText = 'width:100px; height:100px; object-fit:cover; border-radius:8px; border:1px solid var(--border); display:block;';
+
+        const del = document.createElement('button');
+        del.innerHTML = '✕';
+        del.style.cssText = `
+          position:absolute; top:4px; right:4px;
+          width:20px; height:20px; border-radius:50%;
+          background:rgba(0,0,0,0.55); color:white;
+          border:none; cursor:pointer; font-size:11px;
+          display:flex; align-items:center; justify-content:center;
+          line-height:1;
+        `;
+        del.onclick = () => {
+          const idx = uploadedPhotos.indexOf(file);
+          if (idx > -1) uploadedPhotos.splice(idx, 1);
+          wrap.remove();
+          if (!grid.children.length) grid.style.display = 'none';
+        };
+
+        wrap.appendChild(img);
+        wrap.appendChild(del);
+        grid.appendChild(wrap);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so same file can be re-selected
+    event.target.value = '';
+  }
+  </script>
+
 </body>
 </html>
