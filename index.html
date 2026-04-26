@@ -509,7 +509,7 @@
 <script>
   // ========================================
   // ⬇️ 設定完 Apps Script 後把網址貼在這裡
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxljkzkPGRHtH17elG92tkdU_jzPOoxvqwLYxhjk62CuB3LSN1VwrPI-fDmQuxiPG0LZA/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzAoTNU6zO5UpfRQAtdSXnmf7JSXrppfe2spnBgdnM5cT3ceSf2OmF1vhTiLU-o4oEFJQ/exec';
   // ========================================
 
   document.querySelectorAll('.model-check').forEach(cb => {
@@ -559,6 +559,9 @@
     btn.innerHTML = '<span class="spinner"></span>送出中...';
     document.getElementById('errorBanner').style.display = 'none';
 
+    // 轉換圖片為 base64
+    const photos = await Promise.all(uploadedPhotos.map(fileToBase64));
+
     const payload = {
       申請時間: new Date().toLocaleString('zh-TW'),
       姓名: name,
@@ -569,7 +572,8 @@
       購買通路: channel,
       送件方式: sendMethod.value,
       收件地址: sendMethod.value === '門市' ? '親至門市' : address,
-      備註: document.getElementById('note').value.trim() || '無'
+      備註: document.getElementById('note').value.trim() || '無',
+      photos: photos   // 圖片陣列，Apps Script 會上傳至 Drive
     };
 
     try {
@@ -634,8 +638,21 @@
       reader.readAsDataURL(file);
     });
 
-    // Reset input so same file can be re-selected
     event.target.value = '';
+  }
+
+  // ── 將圖片轉成 base64 ──
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve({
+        name: file.name,
+        type: file.type,
+        data: r.result.split(',')[1]
+      });
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
   }
   </script>
 
