@@ -459,13 +459,18 @@
 
       <div class="field">
         <label>購買通路 <span class="req">*</span></label>
-        <select id="channel">
+        <select id="channel" onchange="handleChannelChange()">
           <option value="" disabled selected>請選擇</option>
           <option>Q哥官網</option>
           <option>Q哥門市</option>
           <option>蝦皮購物</option>
           <option>其他通路</option>
         </select>
+      </div>
+
+      <div class="field" id="shopeeOrderBlock" style="display:none;">
+        <label>蝦皮訂單編號 <span class="req">*</span> <span class="hint">請填寫蝦皮購買時的訂單編號</span></label>
+        <input type="text" id="orderNo" placeholder="例：2501011234567">
       </div>
 
       <div class="section-title">寄回資訊</div>
@@ -529,6 +534,13 @@
     });
   });
 
+  function handleChannelChange() {
+    const channel = document.getElementById('channel').value;
+    const block = document.getElementById('shopeeOrderBlock');
+    block.style.display = channel === '蝦皮購物' ? 'block' : 'none';
+    if (channel !== '蝦皮購物') document.getElementById('orderNo').value = '';
+  }
+
   document.querySelectorAll('input[name="sendMethod"]').forEach(radio => {
     radio.addEventListener('change', () => {
       document.getElementById('addressBlock').style.display =
@@ -540,11 +552,13 @@
     const name = document.getElementById('name').value.trim();
     const phone = document.getElementById('phone').value.trim();
     const email = document.getElementById('email').value.trim();
+    const orderNo = document.getElementById('orderNo') ? document.getElementById('orderNo').value.trim() : '';
     const channel = document.getElementById('channel').value;
     const sendMethod = document.querySelector('input[name="sendMethod"]:checked');
     const models = [...document.querySelectorAll('.model-check:checked')].map(c => c.value);
 
     if (!name || !phone || !email) { alert('請填寫姓名、電話與 Email'); return; }
+    if (channel === '蝦皮購物' && !orderNo) { alert('請填寫蝦皮訂單編號'); return; }
     if (models.length === 0) { alert('請選擇至少一項召回商品型號'); return; }
 
     let qtyValid = true;
@@ -574,6 +588,7 @@
       姓名: name,
       電話: phone,
       Email: email,
+      訂單編號: channel === '蝦皮購物' ? orderNo : '—',
       型號與數量: modelQtyList.join('、'),
       購買日期: document.getElementById('buyDate').value || '未填寫',
       購買通路: channel,
