@@ -521,7 +521,7 @@
 <script>
   // ========================================
   // ⬇️ 設定完 Apps Script 後把網址貼在這裡
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzAoTNU6zO5UpfRQAtdSXnmf7JSXrppfe2spnBgdnM5cT3ceSf2OmF1vhTiLU-o4oEFJQ/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwm4F_9plvI31egWZ4N_kvCnHP_ymNuitQL2N6P7PkJsJlKXFu0PLl6-WjzogyecXaxkg/exec';
   // ========================================
 
   document.querySelectorAll('.model-check').forEach(cb => {
@@ -588,14 +588,14 @@
       姓名: name,
       電話: phone,
       Email: email,
-      訂單編號: channel === '蝦皮購物' ? orderNo : '—',
       型號與數量: modelQtyList.join('、'),
       購買日期: document.getElementById('buyDate').value || '未填寫',
       購買通路: channel,
+      訂單編號: channel === '蝦皮購物' ? orderNo : '—',
       送件方式: sendMethod.value,
       收件地址: sendMethod.value === '門市' ? '親至門市' : address,
       備註: document.getElementById('note').value.trim() || '無',
-      photos: photos   // 圖片陣列，Apps Script 會上傳至 Drive
+      photos: photos
     };
 
     try {
