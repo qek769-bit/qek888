@@ -11,6 +11,7 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Referer": "https://shop.polywell.com.tw/",
     "Origin": "https://shop.polywell.com.tw",
+    "Content-Type": "application/json",
     "Accept": "application/json",
 }
 
@@ -32,16 +33,16 @@ query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!
 """
 
 def fetch_newest_products():
-    params = {
+    payload = {
         "operationName": "cms_shopNewestSalePage",
         "query": QUERY.strip(),
-        "variables": json.dumps({
+        "variables": {
             "shopId": 42027,
             "startIndex": 0,
             "fetchCount": 50
-        })
+        }
     }
-    resp = requests.get(GRAPHQL_URL, params=params, headers=HEADERS, timeout=15)
+    resp = requests.post(GRAPHQL_URL, json=payload, headers=HEADERS, timeout=15)
     resp.raise_for_status()
     data = resp.json()
     return data["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
