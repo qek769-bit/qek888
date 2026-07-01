@@ -1,35 +1,42 @@
-import requests
 import json
 import os
-from urllib.parse import urlencode
+import asyncio
+from playwright.async_api import async_playwright
+import requests
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
+TARGET_URL = "https://shop.polywell.com.tw/v2/Official/NewestSalePage"
+API_KEYWORD = "cms_shopNewestSalePage"
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "*/*",
-    "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Referer": "https://shop.polywell.com.tw/",
-    "Origin": "https://shop.polywell.com.tw",
-}
+async def fetch_newest_products():
+    products = []
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        )
+        page = await context.new_page()
 
-QUERY = "query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) { shopNewestSalePage(shopId: $shopId) { salePageList(startIndex: $startIndex, maxCount: $fetchCount) { salePageList { salePageId title price suggestPrice isSoldOut } totalSize } } }"
+        captured = []
 
-def fetch_newest_products():
-    variables = json.dumps({"shopId": 42027, "startIndex": 0, "fetchCount": 50})
-    qs = urlencode({
-        "operationName": "cms_shopNewestSalePage",
-        "variables": variables,
-        "query": QUERY,
-    })
-    url = "https://fts-api.91app.com/pythia-cdn/graphql?" + qs
-    resp = requests.get(url, headers=HEADERS, timeout=15)
-    print("Status:", resp.status_code)
-    resp.raise_for_status()
-    data = resp.json()
-    return data["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
+        async def handle_response(response):
+            if API_KEYWORD in response.url:
+                try:
+                    data = await response.json()
+                    items = data.get("data", {}).get("shopNewestSalePage", {}).get("salePageList", {}).get("salePageList", [])
+                    if items:
+                        captured.extend(items)
+                except Exception:
+                    pass
+
+        page.on("response", handle_response)
+        await page.goto(TARGET_URL, timeout=30000, wait_until="networkidle")
+        await asyncio.sleep(3)
+        await browser.close()
+        products = captured
+    return products
 
 def load_last_ids():
     if os.path.exists(STATE_FILE):
@@ -43,22 +50,26 @@ def save_current_ids(ids):
 
 def send_telegram(message):
     url = "https://api.telegram.org/bot{}/sendMessage".format(TELEGRAM_TOKEN)
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message
-    }
+    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     resp = requests.post(url, json=payload, timeout=10)
     resp.raise_for_status()
 
 def main():
     try:
-        products = fetch_newest_products()
+        products = asyncio.run(fetch_newest_products())
     except Exception as e:
-        err_msg = "⚠️ POLYWELL 監控錯誤：API 呢叫失敗 - {}".format(e)
+        err_msg = "⚠️ POLYWELL 監控錯誤：{}".format(e)
         print(err_msg)
         send_telegram(err_msg)
         return
 
+    if not products:
+        err_msg = "⚠️ POLYWELL 監控錯誤：無法取得商品資料"
+        print(err_msg)
+        send_telegram(err_msg)
+        return
+
+    print("Fetched {} products.".format(len(products)))
     current_ids = {str(p["salePageId"]) for p in products}
     last_ids = load_last_ids()
 
