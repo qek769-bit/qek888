@@ -21,7 +21,10 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: |
+          pip install requests playwright
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
 
       - name: Run monitor script
         env:
