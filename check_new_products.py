@@ -11,34 +11,27 @@ TARGET_URL = "https://" + "shop.polywell.com.tw/v2/Official/NewestSalePage"
 
 READ_SCRIPT = """
 () => {
-    // Try to find product data in window object
-    const sources = [
-        window.__NEXT_DATA__,
-        window.__NUXT__,
-        window.__INITIAL_STATE__,
-        window.__redux_state__,
-        window.__APP_DATA__,
-    ];
-
-    // Try DOM scraping as fallback
-    const productCards = document.querySelectorAll("[class*='product'], [class*='item'], [data-product-id]");
-    const domProducts = [];
-    productCards.forEach(card => {
-        const id = card.getAttribute("data-product-id") || card.getAttribute("data-id");
-        const titleEl = card.querySelector("[class*='title'], [class*='name'], h3, h4");
-        if (id || titleEl) {
-            domProducts.push({
-                salePageId: id || Math.random(),
-                title: titleEl ? titleEl.textContent.trim() : "unknown",
-            });
-        }
-    });
-
+    // Find all elements with potential product identifiers
+    const links = Array.from(document.querySelectorAll("a[href*='/product'], a[href*='SalePage'], a[href*='sale_page'], a[href*='ProductDetail']"));
+    const productLinks = links.slice(0, 10).map(a => ({href: a.href, text: a.textContent.trim().substring(0, 50)}));
+    
+    // Try data attributes
+    const dataElements = Array.from(document.querySelectorAll("[data-salepage-id], [data-product-id], [data-id], [data-sid]"));
+    const dataItems = dataElements.slice(0, 5).map(el => ({
+        tag: el.tagName,
+        attrs: Object.fromEntries([...el.attributes].map(a => [a.name, a.value.substring(0,50)])),
+        text: el.textContent.trim().substring(0, 30)
+    }));
+    
+    // Get a sample of product card HTML
+    const cards = document.querySelectorAll("[class*='SalePage'], [class*='sale-page'], [class*='product-card'], [class*='ProductCard'], [class*='ItemCard']");
+    const cardSamples = Array.from(cards).slice(0, 3).map(c => c.outerHTML.substring(0, 300));
+    
     return {
-        windowSources: sources.filter(x => x != null).map(x => JSON.stringify(x).substring(0, 200)),
-        domProducts: domProducts.slice(0, 5),
-        windowKeys: Object.keys(window).filter(k => k.startsWith("__")).join(", "),
-        bodyTextSample: document.body.innerText.substring(0, 500)
+        productLinks: productLinks,
+        dataItems: dataItems,
+        cardCount: cards.length,
+        cardSamples: cardSamples
     };
 }
 """
@@ -53,24 +46,15 @@ async def fetch_newest_products():
         print("Loading page...")
         await page.goto(TARGET_URL, timeout=60000, wait_until="networkidle")
         await asyncio.sleep(3)
-        print("Reading page data...")
+        print("Reading DOM structure...")
         data = await page.evaluate(READ_SCRIPT)
-        print("Window keys:", data.get("windowKeys", "none"))
-        print("DOM products:", len(data.get("domProducts", [])))
-        print("Window sources:", data.get("windowSources", []))
-        print("Body text:", data.get("bodyTextSample", "")[:200])
+        print("Product links:", data.get("productLinks", []))
+        print("Data items:", data.get("dataItems", []))
+        print("Card count:", data.get("cardCount", 0))
+        for i, s in enumerate(data.get("cardSamples", [])):
+            print("Card sample {}: {}".format(i, s[:200]))
         await browser.close()
     return []
-
-def load_last_ids():
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
-
-def save_current_ids(ids):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(ids), f)
 
 def send_telegram(message):
     base = "https://api.telegram.org"
@@ -81,7 +65,7 @@ def send_telegram(message):
 
 def main():
     products = asyncio.run(fetch_newest_products())
-    send_telegram("⚠️ POLYWELL DEBUG: 已完成頁面分析，請檢查 GitHub Actions 日誌")
+    send_telegram("⚠️ POLYWELL DEBUG #2: 已完成 DOM 結構分析")
 
 if __name__ == "__main__":
     main()
