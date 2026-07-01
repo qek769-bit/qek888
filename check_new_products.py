@@ -83,18 +83,19 @@ def main():
             orig = p.get("suggestPrice") or 0
             curr = p.get("price") or 0
             if orig and orig != curr:
-                price_str = f"\u539f\u50f9 <s>${orig}</s> \u2192 \u73fe\u5728 <b>${curr}</b>"
+                price_str = "\u539f\u50f9 <s>${}</s> \u2192 \u73fe\u5728 <b>${}</b>".format(orig, curr)
             else:
-                price_str = f"<b>${curr}</b>"
+                price_str = "<b>${}</b>".format(curr)
+            sold_out_status = "\ud83d\udeab \u5df7\u552e\u5b8c" if p.get("isSoldOut") else "\u2705 \u73fe\u8ca8"
             msg = (
-                f"\ud83d\udc15 <b>POLYWELL \u65b0\u54c1\u4e0a\u67b6\uff01</b>\n\n"
-                f"\ud83d\udce6 {p['title']}\n"
-                f"\ud83d\udcb0 {price_str}\n"
-                f"{'\ud83d\udeab \u5df7\u552e\u5b8c' if p.get('isSoldOut') else '\u2705 \u73fe\u8ca8'}\n\n"
-                f"\ud83d\udd17 https://shop.polywell.com.tw/v2/Official/NewestSalePage"
-            )
+                "\ud83d\udc15 <b>POLYWELL \u65b0\u54c1\u4e0a\u67b6\uff01</b>\n\n"
+                "\ud83d\udce6 {}\n"
+                "\ud83d\udcb0 {}\n"
+                "{}\n\n"
+                "\ud83d\udd17 https://shop.polywell.com.tw/v2/Official/NewestSalePage"
+            ).format(p["title"], price_str, sold_out_status)
             send_telegram(msg)
-            print(f"Notified: {p['title']}")
+            print("Notified: {}".format(p["title"]))
     else:
         print("No new products.")
 
