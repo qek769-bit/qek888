@@ -82,20 +82,28 @@ def main():
             orig = p.get("suggestPrice") or 0
             curr = p.get("price") or 0
             if orig and orig != curr:
-                price_str = "\u539f\u50f9 ${} \u2192 \u73fe\u5728 ${}".format(orig, curr)
+                price_str = "原價 ${} → 現在 ${}".format(orig, curr)
             else:
                 price_str = "${}".format(curr)
-            sold_status = "\u5df7\u552e\u5b8c" if p.get("isSoldOut") else "\u73fe\u8ca8"
+            sold_status = "巷售完" if p.get("isSoldOut") else "現貨"
             msg = (
-                "\ud83d\udc15 POLYWELL \u65b0\u54c1\u4e0a\u67b6\uff01\n\n"
-                "\ud83d\udce6 {}\n"
-                "\ud83d\udcb0 {}\n"
-                "{}\n\n"
-                "\ud83d\udd17 https://shop.polywell.com.tw/v2/Official/NewestSalePage"
+                "🐕 POLYWELL 新品上架！
+
+"
+                "📦 {}
+"
+                "💰 {}
+"
+                "{}
+
+"
+                "🔗 https://shop.polywell.com.tw/v2/Official/NewestSalePage"
             ).format(p["title"], price_str, sold_status)
             send_telegram(msg)
             print("Notified: {}".format(p["title"]))
     else:
+        msg = "✅ POLYWELL 監控報告：目前沒有新品上架。"
+        send_telegram(msg)
         print("No new products.")
 
     save_current_ids(current_ids)
