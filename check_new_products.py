@@ -86,19 +86,7 @@ def main():
             else:
                 price_str = "${}".format(curr)
             sold_status = "巷售完" if p.get("isSoldOut") else "現貨"
-            msg = (
-                "🐕 POLYWELL 新品上架！
-
-"
-                "📦 {}
-"
-                "💰 {}
-"
-                "{}
-
-"
-                "🔗 https://shop.polywell.com.tw/v2/Official/NewestSalePage"
-            ).format(p["title"], price_str, sold_status)
+            msg = "🐕 POLYWELL 新品上架！\n\n📦 {}\n💰 {}\n{}\n\n🔗 https://shop.polywell.com.tw/v2/Official/NewestSalePage".format(p["title"], price_str, sold_status)
             send_telegram(msg)
             print("Notified: {}".format(p["title"]))
     else:
