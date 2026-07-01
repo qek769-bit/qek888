@@ -8,43 +8,39 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
 TARGET_URL = "https://shop.polywell.com.tw/v2/Official/NewestSalePage"
-API_KEYWORD = "91app.com"
+
+GQL_QUERY = "query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) { shopNewestSalePage(shopId: $shopId) { salePageList(startIndex: $startIndex, maxCount: $fetchCount) { salePageList { salePageId title price suggestPrice isSoldOut } totalSize } } }"
 
 async def fetch_newest_products():
-    captured = []
-    all_api_urls = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
-
-        async def handle_response(response):
-            url = response.url
-            if "91app.com" in url:
-                all_api_urls.append(url[:120])
-            if "shopNewestSalePage" in url or "NewestSalePage" in url or "newestSalePage" in url.lower():
-                try:
-                    data = await response.json()
-                    items = data.get("data", {}).get("shopNewestSalePage", {}).get("salePageList", {}).get("salePageList", [])
-                    if items:
-                        captured.extend(items)
-                        print("Captured {} items from: {}".format(len(items), url[:80]))
-                except Exception as ex:
-                    print("Parse error: {}".format(ex))
-
-        page.on("response", handle_response)
-        print("Navigating to page...")
+        print("Loading page...")
         await page.goto(TARGET_URL, timeout=60000)
-        print("Waiting for network...")
-        await asyncio.sleep(8)
+        await asyncio.sleep(5)
+        print("Page loaded. Executing fetch from browser context...")
+        result = await page.evaluate("""async () => {
+            const resp = await fetch("https://fts-api.91app.com/pythia-cdn/graphql", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    operationName: "cms_shopNewestSalePage",
+                    variables: { shopId: 42027, startIndex: 0, fetchCount: 50 },
+                    query: arguments[0]
+                })
+            });
+            const data = await resp.json();
+            return data;
+        }""", GQL_QUERY)
         await browser.close()
-
-    print("All 91app API URLs found: {}", len(all_api_urls))
-    for u in all_api_urls[:10]:
-        print("  URL:", u)
-    return captured
+    print("Got result type:", type(result))
+    if isinstance(result, dict) and "data" in result:
+        return result["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
+    print("Unexpected result:", str(result)[:200])
+    return []
 
 def load_last_ids():
     if os.path.exists(STATE_FILE):
