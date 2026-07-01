@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import asyncio
 from playwright.async_api import async_playwright
 import requests
@@ -9,30 +10,27 @@ TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
 TARGET_URL = "https://" + "shop.polywell.com.tw/v2/Official/NewestSalePage"
 
-READ_SCRIPT = """
+SCRAPE_SCRIPT = """
 () => {
-    // Find all elements with potential product identifiers
-    const links = Array.from(document.querySelectorAll("a[href*='/product'], a[href*='SalePage'], a[href*='sale_page'], a[href*='ProductDetail']"));
-    const productLinks = links.slice(0, 10).map(a => ({href: a.href, text: a.textContent.trim().substring(0, 50)}));
-    
-    // Try data attributes
-    const dataElements = Array.from(document.querySelectorAll("[data-salepage-id], [data-product-id], [data-id], [data-sid]"));
-    const dataItems = dataElements.slice(0, 5).map(el => ({
-        tag: el.tagName,
-        attrs: Object.fromEntries([...el.attributes].map(a => [a.name, a.value.substring(0,50)])),
-        text: el.textContent.trim().substring(0, 30)
-    }));
-    
-    // Get a sample of product card HTML
-    const cards = document.querySelectorAll("[class*='SalePage'], [class*='sale-page'], [class*='product-card'], [class*='ProductCard'], [class*='ItemCard']");
-    const cardSamples = Array.from(cards).slice(0, 3).map(c => c.outerHTML.substring(0, 300));
-    
-    return {
-        productLinks: productLinks,
-        dataItems: dataItems,
-        cardCount: cards.length,
-        cardSamples: cardSamples
-    };
+    // Find all product card links with /SalePage/Index/{id}
+    const cards = document.querySelectorAll("a[href*='/SalePage/Index/']");
+    const products = [];
+    const seen = new Set();
+    cards.forEach(card => {
+        const href = card.getAttribute("href") || "";
+        const match = href.match(/\/SalePage\/Index\/(\d+)/);
+        if (!match) return;
+        const salePageId = match[1];
+        if (seen.has(salePageId)) return;
+        seen.add(salePageId);
+        const titleEl = card.querySelector("[class*='title'], [class*='name'], strong, p");
+        const title = titleEl ? titleEl.textContent.trim() : card.textContent.trim().substring(0, 60);
+        const priceEls = card.querySelectorAll("[class*='price'], [class*='Price']");
+        let price = "";
+        priceEls.forEach(el => { price += el.textContent.trim() + " "; });
+        products.push({ salePageId: salePageId, title: title, priceText: price.trim() });
+    });
+    return products;
 }
 """
 
@@ -43,18 +41,22 @@ async def fetch_newest_products():
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         )
         page = await context.new_page()
-        print("Loading page...")
         await page.goto(TARGET_URL, timeout=60000, wait_until="networkidle")
         await asyncio.sleep(3)
-        print("Reading DOM structure...")
-        data = await page.evaluate(READ_SCRIPT)
-        print("Product links:", data.get("productLinks", []))
-        print("Data items:", data.get("dataItems", []))
-        print("Card count:", data.get("cardCount", 0))
-        for i, s in enumerate(data.get("cardSamples", [])):
-            print("Card sample {}: {}".format(i, s[:200]))
+        products = await page.evaluate(SCRAPE_SCRIPT)
         await browser.close()
-    return []
+    print("Scraped {} products".format(len(products)))
+    return products
+
+def load_last_ids():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            return set(json.load(f))
+    return set()
+
+def save_current_ids(ids):
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(list(ids), f)
 
 def send_telegram(message):
     base = "https://api.telegram.org"
@@ -64,8 +66,46 @@ def send_telegram(message):
     resp.raise_for_status()
 
 def main():
-    products = asyncio.run(fetch_newest_products())
-    send_telegram("⚠️ POLYWELL DEBUG #2: 已完成 DOM 結構分析")
+    try:
+        products = asyncio.run(fetch_newest_products())
+    except Exception as e:
+        err_msg = "⚠️ POLYWELL 監控錯誤：{}".format(e)
+        print(err_msg)
+        send_telegram(err_msg)
+        return
+
+    if not products:
+        err_msg = "⚠️ POLYWELL 監控錯誤：無法取得商品資料"
+        print(err_msg)
+        send_telegram(err_msg)
+        return
+
+    print("Fetched {} products.".format(len(products)))
+    current_ids = {p["salePageId"] for p in products}
+    last_ids = load_last_ids()
+
+    if not last_ids:
+        save_current_ids(current_ids)
+        print("First run: saved {} products.".format(len(current_ids)))
+        return
+
+    new_ids = current_ids - last_ids
+    new_products = [p for p in products if p["salePageId"] in new_ids]
+
+    if new_products:
+        print("Found {} new product(s)!".format(len(new_products)))
+        for p in new_products:
+            link = "https://" + "shop.polywell.com.tw/v2/Official/NewestSalePage"
+            msg = "🐕 POLYWELL 新品上架！\n\n📦 {}\n💰 {}\n\n🔗 {}".format(
+                p["title"], p.get("priceText", ""), link)
+            send_telegram(msg)
+            print("Notified: {}".format(p["title"]))
+    else:
+        msg = "✅ POLYWELL 監控報告：目前沒有新品上架。"
+        send_telegram(msg)
+        print("No new products.")
+
+    save_current_ids(current_ids)
 
 if __name__ == "__main__":
     main()
