@@ -7,6 +7,13 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Referer": "https://shop.polywell.com.tw/",
+    "Origin": "https://shop.polywell.com.tw",
+    "Accept": "application/json",
+}
+
 QUERY = """
 query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) {
   shopNewestSalePage(shopId: $shopId) {
@@ -34,7 +41,7 @@ def fetch_newest_products():
             "fetchCount": 50
         })
     }
-    resp = requests.get(GRAPHQL_URL, params=params, timeout=15)
+    resp = requests.get(GRAPHQL_URL, params=params, headers=HEADERS, timeout=15)
     resp.raise_for_status()
     data = resp.json()
     return data["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
@@ -62,7 +69,9 @@ def main():
     try:
         products = fetch_newest_products()
     except Exception as e:
-        print("API error: {}".format(e))
+        err_msg = "⚠️ POLYWELL 監控錯誤：API 呢叫失敗 - {}".format(e)
+        print(err_msg)
+        send_telegram(err_msg)
         return
 
     current_ids = {str(p["salePageId"]) for p in products}
