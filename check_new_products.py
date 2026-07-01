@@ -8,42 +8,54 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
 TARGET_URL = "https://" + "shop.polywell.com.tw/v2/Official/NewestSalePage"
-INTERCEPTOR = """
-window.__capturedData = null;
-var origFetch = window.fetch;
-window.fetch = function() {
-    var args = Array.prototype.slice.call(arguments);
-    var url = typeof args[0] === "string" ? args[0] : (args[0] ? (args[0].url || "") : "");
-    return origFetch.apply(window, args).then(function(resp) {
-        if (url.indexOf("shopNewestSalePage") >= 0) {
-            var clone = resp.clone();
-            clone.json().then(function(d) { window.__capturedData = d; }).catch(function(){});
-        }
-        return resp;
-    });
-};
-"""
+API_PATTERN = "**/graphql*shopNewestSalePage*"
 
 async def fetch_newest_products():
+    captured_data = []
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         )
-        await context.add_init_script(INTERCEPTOR)
         page = await context.new_page()
-        print("Loading page with interceptor...")
+
+        async def handle_response(response):
+            url = response.url
+            if "shopNewestSalePage" in url:
+                print("Intercepted URL:", url[:100])
+                try:
+                    body = await response.body()
+                    # Try to decompress if needed
+                    try:
+                        import gzip
+                        body = gzip.decompress(body)
+                    except Exception:
+                        pass
+                    try:
+                        import brotli
+                        body = brotli.decompress(body)
+                    except Exception:
+                        pass
+                    data = json.loads(body)
+                    items = data.get("data", {}).get("shopNewestSalePage", {}).get("salePageList", {}).get("salePageList", [])
+                    if items:
+                        captured_data.extend(items)
+                        print("Got {} items!".format(len(items)))
+                    else:
+                        print("Response body (no items):", str(data)[:200])
+                except Exception as ex:
+                    print("Parse error:", ex)
+
+        page.on("response", handle_response)
+        print("Navigating...")
         await page.goto(TARGET_URL, timeout=60000)
-        print("Waiting 8s for data...")
-        await asyncio.sleep(8)
-        result = await page.evaluate("window.__capturedData")
+        print("Waiting 10s...")
+        await asyncio.sleep(10)
         await browser.close()
-    print("Got result:", str(result)[:300])
-    if result and isinstance(result, dict) and result.get("data"):
-        items = result["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
-        print("Items count:", len(items))
-        return items
-    return []
+
+    print("Total captured:", len(captured_data))
+    return captured_data
 def load_last_ids():
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, "r", encoding="utf-8") as f:
@@ -55,7 +67,8 @@ def save_current_ids(ids):
         json.dump(list(ids), f)
 
 def send_telegram(message):
-    url = "https://api.telegram.org" + "/bot{}/sendMessage".format(TELEGRAM_TOKEN)
+    base = "https://api.telegram.org"
+    url = base + "/bot{}/sendMessage".format(TELEGRAM_TOKEN)
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     resp = requests.post(url, json=payload, timeout=10)
     resp.raise_for_status()
