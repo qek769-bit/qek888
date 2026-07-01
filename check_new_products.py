@@ -11,6 +11,22 @@ TARGET_URL = "https://shop.polywell.com.tw/v2/Official/NewestSalePage"
 
 GQL_QUERY = "query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) { shopNewestSalePage(shopId: $shopId) { salePageList(startIndex: $startIndex, maxCount: $fetchCount) { salePageList { salePageId title price suggestPrice isSoldOut } totalSize } } }"
 
+FETCH_SCRIPT = """
+async (gqlQuery) => {
+    const resp = await fetch("https://fts-api.91app.com/pythia-cdn/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            operationName: "cms_shopNewestSalePage",
+            variables: { shopId: 42027, startIndex: 0, fetchCount: 50 },
+            query: gqlQuery
+        })
+    });
+    const data = await resp.json();
+    return data;
+}
+"""
+
 async def fetch_newest_products():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -21,25 +37,14 @@ async def fetch_newest_products():
         print("Loading page...")
         await page.goto(TARGET_URL, timeout=60000)
         await asyncio.sleep(5)
-        print("Page loaded. Executing fetch from browser context...")
-        result = await page.evaluate("""async () => {
-            const resp = await fetch("https://fts-api.91app.com/pythia-cdn/graphql", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    operationName: "cms_shopNewestSalePage",
-                    variables: { shopId: 42027, startIndex: 0, fetchCount: 50 },
-                    query: arguments[0]
-                })
-            });
-            const data = await resp.json();
-            return data;
-        }""", GQL_QUERY)
+        print("Executing fetch from browser context...")
+        result = await page.evaluate(FETCH_SCRIPT, GQL_QUERY)
         await browser.close()
-    print("Got result type:", type(result))
+    print("Got result:", str(result)[:200])
     if isinstance(result, dict) and "data" in result:
-        return result["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
-    print("Unexpected result:", str(result)[:200])
+        items = result["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
+        print("Items count:", len(items))
+        return items
     return []
 
 def load_last_ids():
