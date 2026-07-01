@@ -1,56 +1,11 @@
 import requests
-import json
 import os
 
-GRAPHQL_URL = "https://fts-api.91app.com/pythia-cdn/graphql"
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
-STATE_FILE = "last_products.json"
-
-QUERY = """
-query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) {
-  shopNewestSalePage(shopId: $shopId) {
-    salePageList(startIndex: $startIndex, maxCount: $fetchCount) {
-      salePageList {
-        salePageId
-        title
-        price
-        suggestPrice
-        isSoldOut
-      }
-      totalSize
-    }
-  }
-}
-"""
-
-def fetch_newest_products():
-    params = {
-        "operationName": "cms_shopNewestSalePage",
-        "query": QUERY.strip(),
-        "variables": json.dumps({
-            "shopId": 42027,
-            "startIndex": 0,
-            "fetchCount": 50
-        })
-    }
-    resp = requests.get(GRAPHQL_URL, params=params, timeout=15)
-    resp.raise_for_status()
-    data = resp.json()
-    return data["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
-
-def load_last_ids():
-    if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return set(json.load(f))
-    return set()
-
-def save_current_ids(ids):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(ids), f)
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    url = "https://api.telegram.org/bot{}/sendMessage".format(TELEGRAM_TOKEN)
     payload = {
         "chat_id": TELEGRAM_CHAT_ID,
         "text": message,
@@ -58,48 +13,16 @@ def send_telegram(message):
     }
     resp = requests.post(url, json=payload, timeout=10)
     resp.raise_for_status()
+    print("Telegram notification sent successfully!")
 
-def main():
-    try:
-        products = fetch_newest_products()
-    except Exception as e:
-        print(f"API error: {e}")
-        return
+msg = (
+    "\ud83d\udd27 <b>PELYPÅL MONITOR \u6dd8\u8a74\u7f4d\u4f7f<u7f6e</b>\n\n"
+    "\u2f55 \u76f4\u63a5\u5235\u8fdf\u9001\u901a\u77e5\u6a1f\u80fd\u6253\u8116\u529f\uff01\n\n"
+    "\ud83d\udc15 <b>\u76ee\u5728\u7a7a\u767b\u55ac\u8b84 POLYWELL \u65b0\u54c1\u4e0a\u67b6</b>\n\n"
+    "\ud83d\udce6 CAT6A \u9030\u9015\u7f50\u8eaa\u7fda 45\u5165 RGJ45\n"
+    "\ud83d\udcb0 \u539f\u50f9 <s>$240</s> \u2192 \u73fe\u5728 <b>$95</b>\n"
+    "\u2705 \u73fe\u8ca8\n\n"
+    "\ud83d\udd17 https://shop.polywell.com.tw/v2/Official/NewestSalePage"
+)
 
-    current_ids = {str(p["salePageId"]) for p in products}
-    last_ids = load_last_ids()
-
-    if not last_ids:
-        save_current_ids(current_ids)
-        print(f"First run: saved {len(current_ids)} products.")
-        return
-
-    new_ids = current_ids - last_ids
-    new_products = [p for p in products if str(p["salePageId"]) in new_ids]
-
-    if new_products:
-        print(f"Found {len(new_products)} new product(s)!")
-        for p in new_products:
-            orig = p.get("suggestPrice") or 0
-            curr = p.get("price") or 0
-            if orig and orig != curr:
-                price_str = "\u539f\u50f9 <s>${}</s> \u2192 \u73fe\u5728 <b>${}</b>".format(orig, curr)
-            else:
-                price_str = "<b>${}</b>".format(curr)
-            sold_out_status = "\ud83d\udeab \u5df7\u552e\u5b8c" if p.get("isSoldOut") else "\u2705 \u73fe\u8ca8"
-            msg = (
-                "\ud83d\udc15 <b>POLYWELL \u65b0\u54c1\u4e0a\u67b6\uff01</b>\n\n"
-                "\ud83d\udce6 {}\n"
-                "\ud83d\udcb0 {}\n"
-                "{}\n\n"
-                "\ud83d\udd17 https://shop.polywell.com.tw/v2/Official/NewestSalePage"
-            ).format(p["title"], price_str, sold_out_status)
-            send_telegram(msg)
-            print("Notified: {}".format(p["title"]))
-    else:
-        print("No new products.")
-
-    save_current_ids(current_ids)
-
-if __name__ == "__main__":
-    main()
+send_telegram(msg)
