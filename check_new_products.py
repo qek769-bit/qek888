@@ -1,48 +1,32 @@
 import requests
 import json
 import os
+from urllib.parse import urlencode
 
-GRAPHQL_URL = "https://fts-api.91app.com/pythia-cdn/graphql"
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "*/*",
+    "Accept-Language": "zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7",
     "Referer": "https://shop.polywell.com.tw/",
     "Origin": "https://shop.polywell.com.tw",
-    "Content-Type": "application/json",
-    "Accept": "application/json",
 }
 
-QUERY = """
-query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) {
-  shopNewestSalePage(shopId: $shopId) {
-    salePageList(startIndex: $startIndex, maxCount: $fetchCount) {
-      salePageList {
-        salePageId
-        title
-        price
-        suggestPrice
-        isSoldOut
-      }
-      totalSize
-    }
-  }
-}
-"""
+QUERY = "query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) { shopNewestSalePage(shopId: $shopId) { salePageList(startIndex: $startIndex, maxCount: $fetchCount) { salePageList { salePageId title price suggestPrice isSoldOut } totalSize } } }"
 
 def fetch_newest_products():
-    payload = {
+    variables = json.dumps({"shopId": 42027, "startIndex": 0, "fetchCount": 50})
+    qs = urlencode({
         "operationName": "cms_shopNewestSalePage",
-        "query": QUERY.strip(),
-        "variables": {
-            "shopId": 42027,
-            "startIndex": 0,
-            "fetchCount": 50
-        }
-    }
-    resp = requests.post(GRAPHQL_URL, json=payload, headers=HEADERS, timeout=15)
+        "variables": variables,
+        "query": QUERY,
+    })
+    url = "https://fts-api.91app.com/pythia-cdn/graphql?" + qs
+    resp = requests.get(url, headers=HEADERS, timeout=15)
+    print("Status:", resp.status_code)
     resp.raise_for_status()
     data = resp.json()
     return data["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
