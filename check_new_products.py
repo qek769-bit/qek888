@@ -8,10 +8,11 @@ TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
 TARGET_URL = "https://shop.polywell.com.tw/v2/Official/NewestSalePage"
-API_KEYWORD = "cms_shopNewestSalePage"
+API_KEYWORD = "91app.com"
 
 async def fetch_newest_products():
-    products = []
+    captured = []
+    all_api_urls = []
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
@@ -19,24 +20,31 @@ async def fetch_newest_products():
         )
         page = await context.new_page()
 
-        captured = []
-
         async def handle_response(response):
-            if API_KEYWORD in response.url:
+            url = response.url
+            if "91app.com" in url:
+                all_api_urls.append(url[:120])
+            if "shopNewestSalePage" in url or "NewestSalePage" in url or "newestSalePage" in url.lower():
                 try:
                     data = await response.json()
                     items = data.get("data", {}).get("shopNewestSalePage", {}).get("salePageList", {}).get("salePageList", [])
                     if items:
                         captured.extend(items)
-                except Exception:
-                    pass
+                        print("Captured {} items from: {}".format(len(items), url[:80]))
+                except Exception as ex:
+                    print("Parse error: {}".format(ex))
 
         page.on("response", handle_response)
-        await page.goto(TARGET_URL, timeout=30000, wait_until="networkidle")
-        await asyncio.sleep(3)
+        print("Navigating to page...")
+        await page.goto(TARGET_URL, timeout=60000)
+        print("Waiting for network...")
+        await asyncio.sleep(8)
         await browser.close()
-        products = captured
-    return products
+
+    print("All 91app API URLs found: {}", len(all_api_urls))
+    for u in all_api_urls[:10]:
+        print("  URL:", u)
+    return captured
 
 def load_last_ids():
     if os.path.exists(STATE_FILE):
