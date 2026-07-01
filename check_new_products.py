@@ -1,52 +1,49 @@
 import json
 import os
 import asyncio
-from urllib.parse import urlencode
 from playwright.async_api import async_playwright
 import requests
 
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TEMEGRAM_CHAT_ID")
 STATE_FILE = "last_products.json"
-TARGET_URL = "https://shop.polywell.com.tw/v2/Official/NewestSalePage"
-
-GQL_QUERY = "query cms_shopNewestSalePage($shopId: Int!, $startIndex: Int!, $fetchCount: Int!) { shopNewestSalePage(shopId: $shopId) { salePageList(startIndex: $startIndex, maxCount: $fetchCount) { salePageList { salePageId title price suggestPrice isSoldOut } totalSize } } }"
-
-FETCH_SCRIPT = """
-async (gqlQuery) => {
-    const vars = JSON.stringify({ shopId: 42027, startIndex: 0, fetchCount: 50 });
-    const params = new URLSearchParams({
-        operationName: "cms_shopNewestSalePage",
-        variables: vars,
-        query: gqlQuery
+TARGET_URL = "https://" + "shop.polywell.com.tw/v2/Official/NewestSalePage"
+INTERCEPTOR = """
+window.__capturedData = null;
+var origFetch = window.fetch;
+window.fetch = function() {
+    var args = Array.prototype.slice.call(arguments);
+    var url = typeof args[0] === "string" ? args[0] : (args[0] ? (args[0].url || "") : "");
+    return origFetch.apply(window, args).then(function(resp) {
+        if (url.indexOf("shopNewestSalePage") >= 0) {
+            var clone = resp.clone();
+            clone.json().then(function(d) { window.__capturedData = d; }).catch(function(){});
+        }
+        return resp;
     });
-    const url = "https://fts-api.91app.com/pythia-cdn/graphql?" + params.toString();
-    const resp = await fetch(url);
-    const data = await resp.json();
-    return data;
-}
+};
 """
 
 async def fetch_newest_products():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         )
+        await context.add_init_script(INTERCEPTOR)
         page = await context.new_page()
-        print("Loading page...")
+        print("Loading page with interceptor...")
         await page.goto(TARGET_URL, timeout=60000)
-        await asyncio.sleep(5)
-        print("Executing GET fetch from browser context...")
-        result = await page.evaluate(FETCH_SCRIPT, GQL_QUERY)
+        print("Waiting 8s for data...")
+        await asyncio.sleep(8)
+        result = await page.evaluate("window.__capturedData")
         await browser.close()
     print("Got result:", str(result)[:300])
-    if isinstance(result, dict) and "data" in result and result["data"]:
+    if result and isinstance(result, dict) and result.get("data"):
         items = result["data"]["shopNewestSalePage"]["salePageList"]["salePageList"]
         print("Items count:", len(items))
         return items
     return []
-
 def load_last_ids():
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, "r", encoding="utf-8") as f:
@@ -58,7 +55,7 @@ def save_current_ids(ids):
         json.dump(list(ids), f)
 
 def send_telegram(message):
-    url = "https://api.telegram.org/bot{}/sendMessage".format(TELEGRAM_TOKEN)
+    url = "https://api.telegram.org" + "/bot{}/sendMessage".format(TELEGRAM_TOKEN)
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": message}
     resp = requests.post(url, json=payload, timeout=10)
     resp.raise_for_status()
@@ -100,7 +97,8 @@ def main():
             else:
                 price_str = "${}".format(curr)
             sold_status = "巷售完" if p.get("isSoldOut") else "現貨"
-            msg = "🐕 POLYWELL 新品上架！\n\n📦 {}\n💰 {}\n{}\n\n🔗 https://shop.polywell.com.tw/v2/Official/NewestSalePage".format(p["title"], price_str, sold_status)
+            link = "https://" + "shop.polywell.com.tw/v2/Official/NewestSalePage"
+            msg = "🐕 POLYWELL 新品上架！\n\n📦 {}\n💰 {}\n{}\n\n🔗 {}".format(p["title"], price_str, sold_status, link)
             send_telegram(msg)
             print("Notified: {}".format(p["title"]))
     else:
